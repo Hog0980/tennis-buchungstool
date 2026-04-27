@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Meine Limits</h2>
+    <div class="limit-cards">
+        <div class="limit-card"><strong>Heute</strong><span>{{ my_limits.used_day }} / {{ my_limits.max_day }} Buchung(en)</span><small>Offen: {{ my_limits.remaining_day }}</small></div>
+        <div class="limit-card"><strong>Maximale Stunden im Voraus buchbar</strong><span>{{ my_limits.used_week_hours }} / {{ my_limits.max_week_hours }} Stunde(n)</span><small>Offen: {{ my_limits.remaining_week_hours }} Stunde(n)</small></div>
+    </div>
+</section>
+<section class="card">
+    <h2>Meine kommenden Buchungen</h2>
+    {% if bookings %}
+    <table>
+        <thead><tr><th>Datum</th><th>Zeit</th><th>Platz</th><th>Spieler</th><th>Notiz</th><th></th></tr></thead>
+        <tbody>
+        {% for booking in bookings %}
+        <tr>
+            <td>{{ booking.start.strftime("%d.%m.%Y") }}</td>
+            <td>{{ booking.start.strftime("%H:%M") }}–{{ booking.end.strftime("%H:%M") }}</td>
+            <td>Platz {{ booking.court }}</td>
+            <td>{{ booking.user.name }} mit {{ booking.partner.name }}</td>
+            <td>{{ booking.note or "" }}</td>
+            <td><form method="post" action="{{ url_for('cancel_booking', booking_id=booking.id) }}"><button class="danger" type="submit">Stornieren</button></form></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p class="muted">Du hast aktuell keine kommenden Buchungen.</p>
+    {% endif %}
+</section>
+{% endblock %}

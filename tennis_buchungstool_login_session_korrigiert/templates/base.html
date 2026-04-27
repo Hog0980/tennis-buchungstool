@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>Tennisplatz-Buchung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="site-header">
+    <div class="brand">
+        <div>
+            <h1>Tennisplatz-Buchung</h1>
+            <p>Vereinsinternes Buchungssystem</p>
+        </div>
+    </div>
+    <nav>
+        {% if current_user %}
+            <a href="{{ url_for('belegung') }}">Belegung</a>
+            {% if current_user.is_approved or current_user.is_admin %}
+                <a href="{{ url_for('book') }}">Buchen</a>
+            {% endif %}
+            <a href="{{ url_for('my_bookings') }}">Meine Buchungen</a>
+            <a href="{{ url_for('change_password') }}">Passwort</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('admin') }}">Admin</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}">Logout</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('register') }}">Registrieren</a>
+        {% endif %}
+    </nav>
+</header>
+
+<main class="container wide-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section class="messages">
+            {% for category, message in messages %}
+                <div class="message {{ category }}">{{ message }}</div>
+            {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</main>
+
+<script>
+let internalNavigation = false;
+
+document.addEventListener("click", function(event) {
+    const link = event.target.closest("a");
+    if (link && link.href && link.origin === window.location.origin) {
+        internalNavigation = true;
+    }
+});
+
+document.addEventListener("submit", function() {
+    internalNavigation = true;
+});
+
+window.addEventListener("beforeunload", function() {
+    if (!internalNavigation && navigator.sendBeacon) {
+        navigator.sendBeacon("{{ url_for('auto_logout') }}");
+    }
+});
+</script>
+</body>
+</html>

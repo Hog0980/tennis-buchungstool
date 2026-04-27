@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <div class="calendar-header-row">
+        <div>
+            <h2>Belegung</h2>
+            {% if view == "day" %}
+                <p class="muted">Tagesübersicht {{ selected_date.strftime("%d.%m.%Y") }}</p>
+            {% elif view == "week" %}
+                <p class="muted">Wochenübersicht ab {{ days[0].strftime("%d.%m.%Y") }}</p>
+            {% else %}
+                <p class="muted">Monatsübersicht {{ first_day.strftime("%m.%Y") }}</p>
+            {% endif %}
+        </div>
+        <form method="get" action="{{ url_for('belegung') }}" class="date-form">
+            <label for="view">Ansicht</label>
+            <select id="view" name="view">
+                <option value="day" {% if view == "day" %}selected{% endif %}>Tag</option>
+                <option value="week" {% if view == "week" %}selected{% endif %}>Woche</option>
+                <option value="month" {% if view == "month" %}selected{% endif %}>Monat</option>
+            </select>
+            <label for="date">Datum</label>
+            <input type="date" id="date" name="date" value="{{ selected_date.isoformat() }}">
+            <button type="submit">Anzeigen</button>
+        </form>
+    </div>
+
+    {% if current_user and not current_user.is_approved and not current_user.is_admin %}
+        <div class="notice">Dein Konto ist registriert, aber noch nicht als Vereinsmitglied freigegeben.</div>
+    {% endif %}
+
+    {% if view == "day" %}
+        <div class="calendar-shell">
+            <div class="calendar-grid calendar-grid-header">
+                <div class="time-header">Zeit</div>
+                {% for court in courts %}<div class="court-header">Platz {{ court }}</div>{% endfor %}
+            </div>
+            <div class="calendar-scroll">
+                <div class="calendar-grid calendar-grid-body">
+                    <div class="time-column">
+                        {% for hour in hours %}<div class="time-slot">{{ "%02d:00"|format(hour) }}</div>{% endfor %}
+                    </div>
+                    {% for court in courts %}
+                        <div class="court-day">
+                            {% for hour in hours %}<div class="hour-line"></div>{% endfor %}
+                            {% set court_blocks = blocks | selectattr("court", "equalto", court) | list %}
+                            {% for block in court_blocks %}
+                                {% set start_minutes = block.start.hour * 60 + block.start.minute %}
+                                {% set end_minutes = block.end.hour * 60 + block.end.minute %}
+                                <div class="calendar-event blocked" style="top: {{ start_minutes }}px; height: {{ end_minutes - start_minutes }}px;">
+                                    <strong>{{ block.start.strftime("%H:%M") }}–{{ block.end.strftime("%H:%M") }}</strong>
+                                    <span>Gesperrt: {{ block.reason }}</span>
+                                </div>
+                            {% endfor %}
+                            {% set court_bookings = bookings | selectattr("court", "equalto", court) | list %}
+                            {% for booking in court_bookings %}
+                                {% set start_minutes = booking.start.hour * 60 + booking.start.minute %}
+                                {% set end_minutes = booking.end.hour * 60 + booking.end.minute %}
+                                <div class="calendar-event" style="top: {{ start_minutes }}px; height: {{ end_minutes - start_minutes }}px;">
+                                    <strong>{{ booking.start.strftime("%H:%M") }}–{{ booking.end.strftime("%H:%M") }}</strong>
+                                    <span>{{ booking.user.name }} mit {{ booking.partner.name }}</span>
+                                    {% if booking.note %}<small>{{ booking.note }}</small>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% elif view == "week" %}
+        <div class="week-scroll">
+            <div class="week-grid">
+                {% for day in days %}
+                    <section class="week-day">
+                        <h3>{{ day.strftime("%a %d.%m.") }}</h3>
+                        {% for court in courts %}
+                            <div class="week-court">
+                                <h4>Platz {{ court }}</h4>
+                                {% for block in blocks %}
+                                    {% if block.court == court and block.start.date() == day %}
+                                        <div class="mini-event blocked"><strong>{{ block.start.strftime("%H:%M") }}–{{ block.end.strftime("%H:%M") }}</strong><span>{{ block.reason }}</span></div>
+                                    {% endif %}
+                                {% endfor %}
+                                {% for booking in bookings %}
+                                    {% if booking.court == court and booking.start.date() == day %}
+                                        <div class="mini-event"><strong>{{ booking.start.strftime("%H:%M") }}–{{ booking.end.strftime("%H:%M") }}</strong><span>{{ booking.user.name }} / {{ booking.partner.name }}</span></div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </section>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="month-nav">
+            <a href="{{ url_for('belegung', view='month', date=prev_month.isoformat()) }}">← vorheriger Monat</a>
+            <strong>{{ first_day.strftime("%B %Y") }}</strong>
+            <a href="{{ url_for('belegung', view='month', date=next_month.isoformat()) }}">nächster Monat →</a>
+        </div>
+        <div class="month-grid">
+            {% for label in ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"] %}
+                <div class="month-label">{{ label }}</div>
+            {% endfor %}
+            {% for week in weeks %}
+                {% for day in week %}
+                    <div class="month-day {% if day.month != first_day.month %}outside-month{% endif %}">
+                        <div class="month-date">{{ day.day }}</div>
+                        {% for court in courts %}
+                            {% for block in blocks %}
+                                {% if block.court == court and block.start.date() == day %}
+                                    <div class="month-entry blocked">P{{ court }} {{ block.start.strftime("%H:%M") }} gesperrt</div>
+                                {% endif %}
+                            {% endfor %}
+                            {% for booking in bookings %}
+                                {% if booking.court == court and booking.start.date() == day %}
+                                    <div class="month-entry">P{{ court }} {{ booking.start.strftime("%H:%M") }} {{ booking.user.name }} / {{ booking.partner.name }}</div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

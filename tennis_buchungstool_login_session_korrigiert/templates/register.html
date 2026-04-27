@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card narrow">
+    <h2>Registrieren</h2>
+    <p class="muted">Eine Registrierung berechtigt erst nach Freigabe durch den Verein zur Buchung.</p>
+    <form method="post" class="form">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+        <label for="email">E-Mail</label>
+        <input type="email" id="email" name="email" required>
+        <label for="password">Passwort</label>
+        <input type="password" id="password" name="password" minlength="8" required>
+        <button type="submit">Konto erstellen</button>
+    </form>
+</section>
+{% endblock %}
