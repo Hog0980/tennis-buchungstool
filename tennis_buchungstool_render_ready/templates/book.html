@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card narrow">
+    <h2>Platz buchen</h2>
+    <p class="muted">Jede Buchung benötigt einen Spielpartner. Die Limits werden für beide Spieler geprüft.</p>
+    {% if not eligible_partners %}
+        <div class="notice">Es gibt noch kein weiteres freigegebenes Mitglied als Spielpartner.</div>
+    {% endif %}
+    <form method="post" class="form">
+        <label for="court">Platz</label>
+        <select id="court" name="court" required>
+            {% for court in courts %}<option value="{{ court }}">Platz {{ court }}</option>{% endfor %}
+        </select>
+
+        <label for="partner_id">Spielpartner</label>
+        <select id="partner_id" name="partner_id" required>
+            <option value="">Bitte auswählen</option>
+            {% for partner in eligible_partners %}
+                <option value="{{ partner.id }}">{{ partner.name }} – {{ partner.email }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="date">Datum</label>
+        <input type="date" id="date" name="date" min="{{ today.isoformat() }}" max="{{ max_date.isoformat() }}" required>
+
+        <label for="start_time">Startzeit</label>
+        <input type="time" id="start_time" name="start_time" step="1800" required>
+
+        <label for="duration_minutes">Dauer</label>
+        <select id="duration_minutes" name="duration_minutes">
+            {% for d in durations %}
+                <option value="{{ d }}" {% if d == 60 %}selected{% endif %}>{{ d }} Minuten</option>
+            {% endfor %}
+        </select>
+
+        <label for="note">Notiz, optional</label>
+        <input type="text" id="note" name="note" maxlength="240" placeholder="z. B. Doppel, Training, Gastspieler">
+
+        <button type="submit" {% if not eligible_partners %}disabled{% endif %}>Buchung anlegen</button>
+    </form>
+</section>
+{% endblock %}

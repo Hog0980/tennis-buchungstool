@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card narrow">
+    <h2>Login</h2>
+    <form method="post" class="form">
+        <label for="email">E-Mail</label>
+        <input type="email" id="email" name="email" required>
+        <label for="password">Passwort</label>
+        <input type="password" id="password" name="password" required>
+        <button type="submit">Einloggen</button>
+    </form>
+    <p class="muted"><a href="{{ url_for('forgot_password') }}">Passwort vergessen?</a></p>
+</section>
+{% endblock %}

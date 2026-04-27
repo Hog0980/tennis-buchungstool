@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+<h2>Adminbereich</h2>
+{% if pending_users %}
+<h3>Neue Registrierungen freischalten</h3>
+<table>
+<thead><tr><th>Name</th><th>E-Mail</th><th>Registriert am</th><th>Aktion</th></tr></thead>
+<tbody>
+{% for user in pending_users %}
+<tr><td>{{ user.name }}</td><td>{{ user.email }}</td><td>{{ user.created_at.strftime("%d.%m.%Y %H:%M") }}</td><td><form method="post" action="{{ url_for('admin_approve_member', user_id=user.id) }}"><button type="submit">Als Mitglied freischalten</button></form></td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p class="muted">Aktuell liegen keine offenen Selbstregistrierungen vor.</p>
+{% endif %}
+</section>
+
+<section class="card">
+<h3>Offene Limits aller aktiven Mitglieder</h3>
+<table>
+<thead><tr><th>Mitglied</th><th>E-Mail</th><th>Heute genutzt</th><th>Heute offen</th><th>Stunden genutzt</th><th>Stunden offen</th></tr></thead>
+<tbody>
+{% for item in member_limits %}
+<tr><td>{{ item.user.name }}</td><td>{{ item.user.email }}</td><td>{{ item.used_day }} / {{ item.max_day }}</td><td>{{ item.remaining_day }}</td><td>{{ item.used_week_hours }} / {{ item.max_week_hours }} Std.</td><td>{{ item.remaining_week_hours }} Std.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</section>
+
+<section class="card">
+<div class="grid-2">
+<section>
+<h3>Buchungsregeln</h3>
+<form method="post" action="{{ url_for('admin_settings') }}" class="form">
+<label>Tage im Voraus buchbar</label><input type="number" name="max_days_in_advance" min="1" max="365" value="{{ settings.max_days_in_advance }}">
+<label>Maximale Dauer je Buchung in Minuten</label><input type="number" name="max_booking_minutes" min="30" max="240" step="30" value="{{ settings.max_booking_minutes }}">
+<label>Maximale Buchungen pro Tag und Spieler</label><input type="number" name="max_bookings_per_day" min="1" max="20" value="{{ settings.max_bookings_per_day }}">
+<label>Maximale Stunden im Voraus buchbar</label><input type="number" name="max_hours_per_week" min="1" max="40" value="{{ settings.max_hours_per_week }}">
+<button type="submit">Regeln speichern</button>
+</form>
+</section>
+<section>
+<h3>Platz sperren</h3>
+<form method="post" action="{{ url_for('admin_add_block') }}" class="form">
+<label>Platz</label><select name="court">{% for court in courts %}<option value="{{ court }}">Platz {{ court }}</option>{% endfor %}</select>
+<label>Datum</label><input type="date" name="date" required>
+<label>Von</label><input type="time" name="start_time" step="1800" required>
+<label>Bis</label><input type="time" name="end_time" step="1800" required>
+<label>Grund</label><input type="text" name="reason" maxlength="240" required>
+<button type="submit">Sperre anlegen</button>
+</form>
+</section>
+</div>
+</section>
+
+<section class="card">
+<h3>Mitglied einzeln hinterlegen</h3>
+<form method="post" action="{{ url_for('admin_add_member') }}" class="inline-form wide">
+<input type="text" name="name" placeholder="Name" required>
+<input type="email" name="email" placeholder="E-Mail" required>
+<label class="checkbox"><input type="checkbox" name="is_admin"> Admin</label>
+<button type="submit">Mitglied anlegen</button>
+</form>
+<h3>Mitglieder per Sammelimport hinterlegen</h3>
+<p class="muted">Je Zeile: Name; E-Mail</p>
+<form method="post" action="{{ url_for('admin_import_members') }}" class="form">
+<textarea name="members" rows="7" placeholder="Max Mustermann; max@example.de&#10;Erika Beispiel; erika@example.de"></textarea>
+<button type="submit">Mitglieder importieren</button>
+</form>
+</section>
+
+<section class="card">
+<h3>Mitglieder und Berechtigungen</h3>
+<table>
+<thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Buchung</th><th>Status</th><th>Passwortstatus</th><th>Startpasswort</th><th>Aktionen</th></tr></thead>
+<tbody>
+{% for user in users %}
+<tr>
+<td>{{ user.name }}</td><td>{{ user.email }}</td><td>{{ "Admin" if user.is_admin else "Mitglied" }}</td><td>{{ "freigegeben" if user.is_approved else "nicht freigegeben" }}</td><td>{{ "aktiv" if user.is_active else "deaktiviert" }}</td><td>{{ "Einmalpasswort aktiv" if user.must_change_password else "eigenes Passwort" }}</td><td><code>{{ user.temporary_password or "" }}</code></td>
+<td class="actions">
+{% if not user.is_approved and user.is_active %}
+<form method="post" action="{{ url_for('admin_approve_member', user_id=user.id) }}"><button type="submit">Freischalten</button></form>
+{% endif %}
+<form method="post" action="{{ url_for('admin_toggle_approved', user_id=user.id) }}"><button type="submit">Buchung ändern</button></form>
+<form method="post" action="{{ url_for('admin_toggle_active', user_id=user.id) }}"><button type="submit">Aktiv ändern</button></form>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</section>
+
+<section class="card">
+<h3>Platzsperren</h3>
+{% if blocks %}
+<table>
+<thead><tr><th>Datum</th><th>Zeit</th><th>Platz</th><th>Grund</th><th></th></tr></thead>
+<tbody>
+{% for block in blocks %}
+<tr><td>{{ block.start.strftime("%d.%m.%Y") }}</td><td>{{ block.start.strftime("%H:%M") }}–{{ block.end.strftime("%H:%M") }}</td><td>Platz {{ block.court }}</td><td>{{ block.reason }}</td><td><form method="post" action="{{ url_for('admin_delete_block', block_id=block.id) }}"><button class="danger" type="submit">Löschen</button></form></td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p class="muted">Keine Platzsperren hinterlegt.</p>
+{% endif %}
+</section>
+
+<section class="card">
+<h3>Letzte Buchungen</h3>
+<table>
+<thead><tr><th>Datum</th><th>Zeit</th><th>Platz</th><th>Spieler</th><th>Notiz</th><th></th></tr></thead>
+<tbody>
+{% for booking in bookings %}
+<tr><td>{{ booking.start.strftime("%d.%m.%Y") }}</td><td>{{ booking.start.strftime("%H:%M") }}–{{ booking.end.strftime("%H:%M") }}</td><td>Platz {{ booking.court }}</td><td>{{ booking.user.name }} mit {{ booking.partner.name }}</td><td>{{ booking.note or "" }}</td><td><form method="post" action="{{ url_for('cancel_booking', booking_id=booking.id) }}"><button class="danger" type="submit">Löschen</button></form></td></tr>
+{% endfor %}
+</tbody>
+</table>
+</section>
+{% endblock %}
